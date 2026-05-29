@@ -188,6 +188,22 @@ app.get('/api/posts/feed', async (req, res) => {
     }
 });
 
+// Create Database Pool (Updated with Secure TLS/SSL for TiDB Cloud)
+const pool = mysql.createPool({
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    port: process.env.DB_PORT || 4000, // TiDB serverless typically defaults to 4000
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+    ssl: {
+        minVersion: 'TLSv1.2',
+        rejectUnauthorized: true // Render automatically provides trusted system certificates
+    }
+});
+
 // Run server initialization
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
