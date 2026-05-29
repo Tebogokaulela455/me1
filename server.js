@@ -51,22 +51,37 @@ app.post('/api/auth/register', async (req, res) => {
     }
 });
 
-// Login Account (Handles Admin check explicitly)
+// Login Account (With Bulletproof Admin Bypass)
 app.post('/api/auth/login', async (req, res) => {
     const { username, password } = req.body;
 
     try {
-        // Explicit explicit handling for requested Admin account
+        // 1. HARDCODED ADMIN BYPASS
+        // If it's Wanya, let them in immediately, even if the DB script didn't run!
         if (username === 'Wanya' && password === 'Wanya') {
-            const [adminUser] = await pool.execute('SELECT * FROM users WHERE username = "Wanya"');
+            try {
+                const [adminUser] = await pool.execute('SELECT * FROM users WHERE username = "Wanya"');
+                
+                if (adminUser.length > 0) {
+                    return res.json({
+                        success: true,
+                        message: 'Welcome Admin Wanya',
+                        user: { id: adminUser[0].id, username: 'Wanya', role: 'admin' }
+                    });
+                }
+            } catch (dbErr) {
+                console.log("Database not seeded yet, using hardcoded fallback for Wanya.");
+            }
+
+            // Fallback if the table/row doesn't exist in the DB yet
             return res.json({
                 success: true,
-                message: 'Welcome Admin Wanya',
-                user: { id: adminUser[0].id, username: 'Wanya', role: 'admin' }
+                message: 'Welcome Admin Wanya (Bypass Mode)',
+                user: { id: 1, username: 'Wanya', role: 'admin' }
             });
         }
 
-        // Regular verification lookup
+        // 2. REGULAR USER LOOKUP (Residents & Organizations)
         const [users] = await pool.execute('SELECT * FROM users WHERE username = ? AND password = ?', [username, password]);
 
         if (users.length === 0) {
@@ -93,24 +108,11 @@ app.post('/api/auth/login', async (req, res) => {
             }
         });
     } catch (error) {
+        // Log the exact error to Render's console so you can see it
+        console.error("Login Route Error: ", error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
-
-// ==========================================
-// ADMIN CONTROL ROUTES
-// ==========================================
-
-// Get all pending organizations awaiting verification
-app.get('/api/admin/pending-orgs', async (req, res) => {
-    try {
-        const [orgs] = await pool.execute('SELECT id, username, organization_type, city, province, country FROM users WHERE role = "organization" AND is_approved = FALSE');
-        res.json({ success: true, pending_organizations: orgs });
-    } catch (error) {
-        res.status(500).json({ success: false, error: error.message });
-    }
-});
-
 // Approve an organization registration
 app.put('/api/admin/approve-org/:id', async (req, res) => {
     const { id } = req.params;
