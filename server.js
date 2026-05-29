@@ -7,17 +7,21 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Create Database Pool (Compatible with TiDB and MySQL)
+// Create Database Pool (Updated with Secure TLS/SSL for TiDB Cloud)
 const pool = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    port: process.env.DB_PORT || 3306,
+    port: process.env.DB_PORT || 4000, // TiDB serverless typically defaults to 4000
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
-});
+    queueLimit: 0,
+    ssl: {
+        minVersion: 'TLSv1.2',
+        rejectUnauthorized: true // Render automatically provides trusted system certificates
+    }
+});   queueLimit: 0
 
 // ==========================================
 // AUTHENTICATION ROUTES (Login & Registration)
